@@ -4,6 +4,7 @@
 #include "BankClasses.h" // Подключаем ваш заголовочный файл
 
 using namespace BankSystem;
+using namespace std;
 
 // Функция для стартового заполнения базы
 void initializeData(DataManager<User> &users, DataManager<Deposit> &deposits)
@@ -27,32 +28,32 @@ int main()
     {
         initializeData(userManager, depositManager);
 
-        std::cout << "==========================================\n";
-        std::cout << " СИСТЕМА УПРАВЛЕНИЯ БАНКОВСКИМИ ВКЛАДАМИ\n";
-        std::cout << "==========================================\n";
+        cout << "==========================================\n";
+        cout << " СИСТЕМА УПРАВЛЕНИЯ БАНКОВСКИМИ ВКЛАДАМИ\n";
+        cout << "==========================================\n";
 
-        std::string inputLogin, inputPass;
-        std::shared_ptr<User> currentUser = nullptr;
+        string inputLogin, inputPass;
+        shared_ptr<User> currentUser = nullptr;
 
         // 1. Блок авторизации
         while (!currentUser)
         {
-            std::cout << "\nВведите логин: ";
-            std::cin >> inputLogin;
-            std::cout << "Введите пароль: ";
-            std::cin >> inputPass;
+            cout << "\nВведите логин: ";
+            cin >> inputLogin;
+            cout << "Введите пароль: ";
+            cin >> inputPass;
 
-            auto foundUser = userManager.findByCondition([&](const std::shared_ptr<User> &u)
+            auto foundUser = userManager.findByCondition([&](const shared_ptr<User> &u)
                                                          { return u->getLogin() == inputLogin; });
 
             if (foundUser && authenticate(*foundUser, inputPass))
             {
                 currentUser = foundUser;
-                std::cout << "\nАвторизация успешна! Добро пожаловать, " << currentUser->getLogin() << ".\n";
+                cout << "\nАвторизация успешна! Добро пожаловать, " << currentUser->getLogin() << ".\n";
             }
             else
             {
-                std::cout << "Ошибка: неверный логин или пароль. Повторите попытку.\n";
+                cout << "Ошибка: неверный логин или пароль. Повторите попытку.\n";
             }
         }
 
@@ -62,12 +63,12 @@ int main()
         {
             currentUser->showMenu();
 
-            std::cout << "Выберите действие (1-4): ";
-            if (!(std::cin >> choice))
+            cout << "Выберите действие (1-4): ";
+            if (!(cin >> choice))
             {
-                std::cin.clear();
-                std::cin.ignore(10000, '\n');
-                std::cout << "Неверный ввод. Пожалуйста, введите число.\n";
+                cin.clear();
+                cin.ignore(10000, '\n');
+                cout << "Неверный ввод. Пожалуйста, введите число.\n";
                 continue;
             }
 
@@ -75,29 +76,29 @@ int main()
             switch (choice)
             {
             case 1:
-                std::cout << "\n[ Выбрана Опция 1 ] - Логика в разработке...\n";
+                cout << "\n[ Выбрана Опция 1 ] - Логика в разработке...\n";
                 break;
             case 2:
-                std::cout << "\n[ Выбрана Опция 2 ] - Логика в разработке...\n";
+                cout << "\n[ Выбрана Опция 2 ] - Логика в разработке...\n";
                 break;
             case 3:
-                std::cout << "\n[ Выбрана Опция 3 ] - Логика в разработке...\n";
+                cout << "\n[ Выбрана Опция 3 ] - Логика в разработке...\n";
                 break;
             case 4:
-                std::cout << "\nЗавершение работы сессии. Выход из программы...\n";
+                cout << "\nЗавершение работы сессии. Выход из программы...\n";
                 break;
             default:
-                std::cout << "\nНеизвестная команда. Выберите пункт меню от 1 до 4.\n";
+                cout << "\nНеизвестная команда. Выберите пункт меню от 1 до 4.\n";
             }
         }
     }
     catch (const BankException &e)
     {
-        std::cerr << "\n[СИСТЕМНАЯ ОШИБКА]: " << e.what() << std::endl;
+        cerr << "\n[СИСТЕМНАЯ ОШИБКА]: " << e.what() << endl;
     }
     catch (const std::exception &e)
     {
-        std::cerr << "\n[КРИТИЧЕСКАЯ ОШИБКА]: " << e.what() << std::endl;
+        cerr << "\n[КРИТИЧЕСКАЯ ОШИБКА]: " << e.what() << endl;
     }
 
     return 0;
