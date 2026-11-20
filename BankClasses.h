@@ -7,23 +7,19 @@
 #include <cstring>
 #include <algorithm>
 #include <functional>
+#include <iterator>
 
 using namespace std;
-{
 
-} // namespace std;
-
-// Собственное пространство имен системы
 namespace BankSystem
 {
-    // Базовый класс для всех ошибок приложения
     class BankException : public exception
     {
     protected:
-        string message; // Текст ошибки
+        string message;
 
     public:
-        explicit BankException(const std::string &msg) : message(msg) {}
+        explicit BankException(const string &msg) : message(msg) {}
 
         virtual const char *what() const noexcept override
         {
@@ -31,22 +27,26 @@ namespace BankSystem
         }
     };
 
-    // Класс ошибок, связанных с операциями по вкладам
     class DepositException : public BankException
     {
     public:
         explicit DepositException(const string &msg) : BankException("Ошибка вклада: " + msg) {}
     };
 
-    // Абстрактный базовый класс счета
+    class AuthException : public BankException
+    {
+    public:
+        explicit AuthException(const string &msg) : BankException("Ошибка доступа: " + msg) {}
+    };
+
     class Account
     {
     protected:
-        int id;                   // Уникальный номер счета
-        string clientName;        // ФИО владельца
-        double balance;           // Текущий баланс
-        static int totalAccounts; // Счетчик всех созданных счетов
-        string contractNumber;    // Уникальный номер договора
+        int id;
+        string clientName;
+        double balance;
+        string contractNumber;
+        static int totalAccounts;
 
     public:
         Account(int accountId, const string &name, double initialBalance);
@@ -54,22 +54,23 @@ namespace BankSystem
 
         virtual void printReport() const = 0;
 
-        static int getTotalAccounts();
-        int getId() const { return id; }
-
         virtual void depositFunds(double amount);
         virtual void withdrawFunds(double amount);
 
+        static int getTotalAccounts();
         static string generateContractNumber(int id);
 
-        string getContractNumber() const { return contractNumber; }
+        int getId() const { return id; }
+        const string &getClientName() const { return clientName; }
+        double getBalance() const { return balance; }
+        const string &getContractNumber() const { return contractNumber; }
+        void setClientName(const string &name) { clientName = name; }
     };
 
-    // Базовый класс банковского вклада
     class Deposit : public Account
     {
     protected:
-        double interestRate; // Процентная ставка
+        double interestRate;
 
     public:
         Deposit(int accountId, const string &name, double initialBalance, double rate);
@@ -77,15 +78,17 @@ namespace BankSystem
 
         virtual void calculateInterest() = 0;
 
+        double getInterestRate() const { return interestRate; }
+        void setInterestRate(double rate) { interestRate = rate; }
+
         friend ostream &operator<<(ostream &os, const Deposit &d);
     };
 
-    // Класс срочного вклада (с фиксированным сроком)
     class TermDeposit : public Deposit
     {
     private:
-        int termMonths;     // Срок вклада в месяцах
-        char *specialNotes; // Динамическая строка: особые условия/примечания к договору
+        int termMonths;
+        char *specialNotes;
 
     public:
         TermDeposit(int accountId, const string &name, double initialBalance, double rate, int months, const char *notes);
@@ -94,12 +97,49 @@ namespace BankSystem
         TermDeposit &operator=(const TermDeposit &other);
         ~TermDeposit() override;
 
+        int getTermMonths() const { return termMonths; }
+        string getSpecialNotes() const { return specialNotes ? string(specialNotes) : ""; }
+
         void printReport() const override;
         void calculateInterest() override;
         void withdrawFunds(double amount) override;
     };
 
-    // Шаблонный класс для управления коллекциями любых объектов
+    class User
+    {
+    protected:
+        string login;
+        string encryptedPassword;
+
+    public:
+        User(const string &l, const string &p);
+        virtual ~User() = default;
+
+        virtual void showMenu() const = 0;
+
+        const string &getLogin() const { return login; }
+        const string &getEncryptedPassword() const { return encryptedPassword; }
+        void setEncryptedPassword(const string &encPass) { encryptedPassword = encPass; }
+
+        static string encryptPassword(const string &pass);
+
+        friend bool authenticate(const User &user, const string &inputPass);
+    };
+
+    class Admin : public User
+    {
+    public:
+        Admin(const string &l, const string &p);
+        void showMenu() const override;
+    };
+
+    class Operator : public User
+    {
+    public:
+        Operator(const string &l, const string &p);
+        void showMenu() const override;
+    };
+
     template <typename T>
     class DataManager
     {
@@ -110,7 +150,9 @@ namespace BankSystem
         void addRecord(const shared_ptr<T> &record)
         {
             if (!record)
+            {
                 throw BankException("Попытка добавить пустую запись");
+            }
             records.push_back(record);
         }
 
@@ -127,23 +169,31 @@ namespace BankSystem
             throw BankException("Запись с таким ID не найдена");
         }
 
+        void clear()
+        {
+            records.clear();
+        }
+
+        size_t size() const
+        {
+            return records.size();
+        }
+
         const vector<shared_ptr<T>> &getAllRecords() const
         {
             return records;
         }
 
-        // 1. Поиск записи с использованием алгоритма STL
-        shared_ptr<T> findByCondition(function<bool(const shared_ptr<T> &)> condition)
+        shared_ptr<T> findByCondition(function<bool(const shared_ptr<T> &)> condition) const
         {
             auto it = find_if(records.begin(), records.end(), condition);
             if (it != records.end())
             {
                 return *it;
             }
-            return nullptr; // Если ничего не найдено
+            return nullptr;
         }
 
-        // 2. Фильтрация записей
         vector<shared_ptr<T>> filterRecords(function<bool(const shared_ptr<T> &)> condition) const
         {
             vector<shared_ptr<T>> filtered;
@@ -151,49 +201,9 @@ namespace BankSystem
             return filtered;
         }
 
-        // 3. Сортировка записей (std::sort)
         void sortRecords(function<bool(const shared_ptr<T> &, const shared_ptr<T> &)> comparator)
         {
             sort(records.begin(), records.end(), comparator);
         }
-    };
-
-    // Абстрактный базовый класс пользователя
-    class User
-    {
-    protected:
-        string login;
-        string encryptedPassword; // Хранение пароля в зашифрованном виде
-
-    public:
-        User(const string &l, const string &p);
-        virtual ~User() = default;
-
-        // Чисто виртуальная функция (полиморфизм) для вывода меню
-        virtual void showMenu() const = 0;
-
-        // Статический метод шифрования
-        static string encryptPassword(const std::string &pass);
-
-        string getLogin() const { return login; }
-
-        // Дружественная функция для проверки прав
-        friend bool authenticate(const User &user, const string &inputPass);
-    };
-
-    // Класс Администратора
-    class Admin : public User
-    {
-    public:
-        Admin(const string &l, const string &p);
-        void showMenu() const override;
-    };
-
-    // Класс Оператора
-    class Operator : public User
-    {
-    public:
-        Operator(const string &l, const string &p);
-        void showMenu() const override;
     };
 }
